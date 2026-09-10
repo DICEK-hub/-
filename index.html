@@ -3,67 +3,93 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>생식세포 분열(감수분열) 카드 매칭 게임</title>
+  <title>생식세포 분열 콤보 매칭 챌린지</title>
   <style>
     :root {
-      --bg-color: #f1f5f9;
-      --card-bg: #2563eb;
-      --card-front: #ffffff;
-      --card-matched: #10b981;
-      --text-main: #1e293b;
+      --bg: #0f172a;
+      --card-back: #3b82f6;
+      --card-back-hover: #2563eb;
+      --card-front: #1e293b;
+      --card-match: #10b981;
+      --accent: #f59e0b;
+      --danger: #ef4444;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
+      user-select: none;
     }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
-      background-color: var(--bg-color);
-      color: var(--text-main);
+      background: var(--bg);
+      color: var(--text);
       display: flex;
       flex-direction: column;
       align-items: center;
       min-height: 100vh;
-      padding: 20px;
+      padding: 16px;
     }
 
-    header {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    h1 {
-      font-size: 1.6rem;
-      margin-bottom: 8px;
-    }
-
-    .status-bar {
-      display: flex;
-      gap: 24px;
-      font-size: 1rem;
-      font-weight: 600;
-      margin-bottom: 16px;
-    }
-
-    .grid-container {
+    /* 상단 상태 대시보드 */
+    .dashboard {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 12px;
-      max-width: 680px;
       width: 100%;
+      max-width: 640px;
+      margin-bottom: 12px;
+    }
+
+    .stat-box {
+      background: #1e293b;
+      border: 1px solid #334155;
+      padding: 8px 12px;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .stat-value {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .stat-value.highlight {
+      color: var(--accent);
+    }
+
+    .stat-value.timer {
+      color: #38bdf8;
+    }
+
+    /* 카드 그리드 */
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      width: 100%;
+      max-width: 640px;
       perspective: 1000px;
     }
 
     .card {
       position: relative;
       width: 100%;
-      height: 120px;
+      height: 105px;
       cursor: pointer;
       transform-style: preserve-3d;
-      transition: transform 0.4s cubic-bezier(0.4, 0.2, 0.2, 1);
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .card.flipped, .card.matched {
@@ -81,201 +107,260 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
+      padding: 8px;
       text-align: center;
-      padding: 10px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-      user-select: none;
       word-break: keep-all;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
     }
 
     .card-back {
-      background: var(--card-bg);
+      background: var(--card-back);
       color: white;
       font-size: 1.8rem;
+      transition: background 0.2s;
+    }
+
+    .card:hover .card-back {
+      background: var(--card-back-hover);
     }
 
     .card-front {
       background: var(--card-front);
       transform: rotateY(180deg);
-      border: 2px solid #cbd5e1;
+      border: 2px solid #475569;
     }
 
     .card.matched .card-front {
-      border-color: var(--card-matched);
-      background-color: #ecfdf5;
+      border-color: var(--card-match);
+      background: #064e3b;
     }
 
-    .card-badge {
-      font-size: 0.75rem;
-      font-weight: bold;
-      color: #64748b;
+    .card.shake {
+      animation: shake 0.4s ease;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: rotateY(180deg) translateX(0); }
+      20%, 60% { transform: rotateY(180deg) translateX(-6px); }
+      40%, 80% { transform: rotateY(180deg) translateX(6px); }
+    }
+
+    .badge {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: #94a3b8;
       margin-bottom: 4px;
+      text-transform: uppercase;
     }
 
     .card-title {
-      font-size: 0.95rem;
-      font-weight: 700;
-      color: #1e3a8a;
+      font-size: 0.88rem;
+      font-weight: bold;
+      color: #60a5fa;
+      line-height: 1.25;
     }
 
     .card-desc {
-      font-size: 0.8rem;
-      line-height: 1.35;
-      color: #334155;
+      font-size: 0.75rem;
+      color: #e2e8f0;
+      line-height: 1.3;
     }
 
-    .controls {
-      margin-top: 24px;
+    /* 플로팅 점수 알림 효과 */
+    .floating-text {
+      position: fixed;
+      font-size: 1.3rem;
+      font-weight: 900;
+      pointer-events: none;
+      animation: floatUp 0.8s forwards ease-out;
+      z-index: 100;
     }
 
-    button {
-      padding: 10px 22px;
-      font-size: 1rem;
-      font-weight: 600;
-      border: none;
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(-40px) scale(1.2); }
+    }
+
+    /* 게임 종료 오버레이 */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(4px);
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 200;
+      padding: 20px;
+    }
+
+    .modal {
+      background: #1e293b;
+      border: 1px solid #475569;
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 380px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal h2 {
+      font-size: 1.5rem;
+      margin-bottom: 12px;
+    }
+
+    .score-summary {
+      background: #0f172a;
       border-radius: 8px;
-      background-color: #1e293b;
+      padding: 12px;
+      margin: 16px 0;
+      font-size: 0.95rem;
+      line-height: 1.8;
+      text-align: left;
+    }
+
+    .btn {
+      background: #3b82f6;
       color: white;
+      border: none;
+      padding: 10px 24px;
+      font-size: 1rem;
+      font-weight: 700;
+      border-radius: 8px;
       cursor: pointer;
       transition: background 0.2s;
+      width: 100%;
     }
 
-    button:hover {
-      background-color: #334155;
+    .btn:hover {
+      background: #2563eb;
     }
 
-    @media (max-width: 500px) {
-      .card {
-        height: 100px;
-      }
-      .card-title {
-        font-size: 0.85rem;
-      }
-      .card-desc {
-        font-size: 0.72rem;
-      }
+    @media (max-width: 480px) {
+      .card { height: 95px; }
+      .card-title { font-size: 0.8rem; }
+      .card-desc { font-size: 0.7rem; }
+      .dashboard { gap: 6px; }
+      .stat-box { padding: 6px 8px; }
+      .stat-value { font-size: 1.05rem; }
     }
   </style>
 </head>
 <body>
 
-  <header>
-    <h1>🧬 생식세포 분열 매칭 게임</h1>
-    <p>분열 단계와 그 시기의 핵심 특징을 짝지어 보세요!</p>
-  </header>
-
-  <div class="status-bar">
-    <div>시도 횟수: <span id="turns">0</span>회</div>
-    <div>완성: <span id="matches">0</span> / 6쌍</div>
+  <div class="dashboard">
+    <div class="stat-box">
+      <div class="stat-label">남은 시간</div>
+      <div class="stat-value timer" id="timeLeft">60s</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">점수</div>
+      <div class="stat-value highlight" id="score">0</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">연속 콤보</div>
+      <div class="stat-value" id="combo">0x</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">최고 기록</div>
+      <div class="stat-value" id="bestScore">0</div>
+    </div>
   </div>
 
   <div class="grid-container" id="grid"></div>
 
-  <div class="controls">
-    <button onclick="startGame()">새 게임 시작</button>
+  <!-- 결과 팝업 -->
+  <div class="overlay" id="modalOverlay">
+    <div class="modal">
+      <h2 id="modalTitle">🏁 게임 종료!</h2>
+      <div class="score-summary">
+        <div>최종 획득 점수: <strong id="finalScore" style="color: var(--accent);">0</strong> 점</div>
+        <div>최대 연속 콤보: <strong id="maxCombo">0</strong> 회</div>
+        <div>성공 매칭 쌍: <strong id="clearedPairs">0</strong> / 6</div>
+      </div>
+      <button class="btn" onclick="startGame()">다시 도전하기</button>
+    </div>
   </div>
 
   <script>
-    // 생식세포 분열 핵심 카드 데이터 (6쌍 = 12장 구성)
-    const cardData = [
-      {
-        matchId: 'm1_pro',
-        stage: '감수 1분열 전기',
-        desc: '상동 염색체가 접합하여 2가 염색체 형성'
-      },
-      {
-        matchId: 'm1_meta',
-        stage: '감수 1분열 중기',
-        desc: '2가 염색체가 세포 중앙(적도면)에 배열'
-      },
-      {
-        matchId: 'm1_ana',
-        stage: '감수 1분열 후기',
-        desc: '상동 염색체가 분리되어 양극으로 이동 (염색체 수 반감)'
-      },
-      {
-        matchId: 'm1_telo',
-        stage: '감수 1분열 말기',
-        desc: '세포질 분열로 2개의 딸세포 형성'
-      },
-      {
-        matchId: 'm2_ana',
-        stage: '감수 2분열 후기',
-        desc: '염색 분체가 분리되어 양극으로 이동 (염색체 수 유지)'
-      },
-      {
-        matchId: 'm2_telo',
-        stage: '감수 2분열 말기',
-        desc: '총 4개의 생식세포(딸세포) 형성 완료'
-      }
+    // 6단계 생식세포 분열 데이터 (명칭 <-> 특징 매칭)
+    const rawData = [
+      { id: 'm1_pro', stage: '감수 1분열 전기', desc: '2가 염색체 형성\n(상동 염색체 접합)' },
+      { id: 'm1_meta', stage: '감수 1분열 중기', desc: '2가 염색체가 세포 중앙 적도면에 배열' },
+      { id: 'm1_ana', stage: '감수 1분열 후기', desc: '상동 염색체 분리\n(염색체 수 반감 2n→n)' },
+      { id: 'm1_telo', stage: '감수 1분열 말기', desc: '세포질 분열로 2개의 딸세포 형성' },
+      { id: 'm2_ana', stage: '감수 2분열 후기', desc: '염색 분체 분리\n(염색체 수 유지 n→n)' },
+      { id: 'm2_telo', stage: '감수 2분열 말기', desc: '총 4개의 생식세포(n) 완성' }
     ];
 
-    let cards = [];
+    let timer = null;
+    let timeLeft = 60;
+    let score = 0;
+    let combo = 0;
+    let maxCombo = 0;
+    let matchedCount = 0;
+    let isLocked = false;
     let firstCard = null;
     let secondCard = null;
-    let lockBoard = false;
-    let turns = 0;
-    let matches = 0;
 
-    function buildDeck() {
+    let bestScore = localStorage.getItem('meiosis_best_score') || 0;
+    document.getElementById('bestScore').textContent = bestScore;
+
+    function buildCards() {
       const deck = [];
-      let idCounter = 1;
+      let cardUid = 1;
 
-      cardData.forEach((item) => {
-        // 1. 단계 명칭 카드
+      rawData.forEach(item => {
         deck.push({
-          id: idCounter++,
-          matchId: item.matchId,
+          uid: cardUid++,
+          matchId: item.id,
           type: 'title',
-          badge: '[분열 단계]',
+          badge: '분열 단계',
           text: item.stage
         });
-        // 2. 핵심 특징 카드
         deck.push({
-          id: idCounter++,
-          matchId: item.matchId,
+          uid: cardUid++,
+          matchId: item.id,
           type: 'desc',
-          badge: '[핵심 특징]',
-          text: item.desc
+          badge: '핵심 특징',
+          text: item.desc.replace('\n', '<br>')
         });
       });
 
-      // Fisher-Yates 셔플 알고리즘으로 무작위 섞기
+      // 셔플
       for (let i = deck.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [deck[i], deck[j]] = [deck[j], deck[i]];
       }
-
       return deck;
     }
 
-    function renderBoard() {
+    function renderBoard(cards) {
       const grid = document.getElementById('grid');
       grid.innerHTML = '';
 
-      cards.forEach((card) => {
+      cards.forEach(c => {
         const cardElem = document.createElement('div');
-        cardElem.classList.add('card');
-        cardElem.dataset.id = card.id;
-        cardElem.dataset.matchId = card.matchId;
-
-        const contentClass = card.type === 'title' ? 'card-title' : 'card-desc';
+        cardElem.className = 'card';
+        cardElem.dataset.matchId = c.matchId;
 
         cardElem.innerHTML = `
           <div class="card-face card-back">🧬</div>
           <div class="card-face card-front">
-            <div class="card-badge">${card.badge}</div>
-            <div class="${contentClass}">${card.text}</div>
+            <div class="badge">${c.badge}</div>
+            <div class="${c.type === 'title' ? 'card-title' : 'card-desc'}">${c.text}</div>
           </div>
         `;
 
-        cardElem.addEventListener('click', () => flipCard(cardElem));
+        cardElem.addEventListener('click', () => onCardClick(cardElem));
         grid.appendChild(cardElem);
       });
     }
 
-    function flipCard(cardElem) {
-      if (lockBoard) return;
+    function onCardClick(cardElem) {
+      if (isLocked) return;
       if (cardElem.classList.contains('flipped') || cardElem.classList.contains('matched')) return;
 
       cardElem.classList.add('flipped');
@@ -286,52 +371,128 @@
       }
 
       secondCard = cardElem;
-      turns++;
-      document.getElementById('turns').textContent = turns;
+      isLocked = true;
       checkMatch();
     }
 
     function checkMatch() {
-      const isMatch = firstCard.dataset.matchId === secondCard.dataset.matchId;
+      const match = firstCard.dataset.matchId === secondCard.dataset.matchId;
 
-      if (isMatch) {
+      if (match) {
         firstCard.classList.add('matched');
         secondCard.classList.add('matched');
-        matches++;
-        document.getElementById('matches').textContent = matches;
-        resetTurn();
 
-        if (matches === cardData.length) {
-          setTimeout(() => {
-            alert(`🎉 축하합니다! 총 ${turns}회 시도만에 모든 단계를 맞췄습니다.`);
-          }, 400);
+        // 점수 계산: 기본 100점 + (콤보 보너스)
+        combo++;
+        if (combo > maxCombo) maxCombo = combo;
+
+        const points = 100 + (combo - 1) * 30;
+        score += points;
+        matchedCount++;
+
+        // 시간 보너스 3초
+        timeLeft = Math.min(timeLeft + 3, 90);
+
+        showFloatingScore(secondCard, `+${points}`, '#10b981');
+        updateUI();
+        resetSelection();
+
+        // 6쌍 모두 클리어 시
+        if (matchedCount === rawData.length) {
+          score += (timeLeft * 20); // 남은 시간 보너스
+          endGame(true);
         }
       } else {
-        lockBoard = true;
+        combo = 0; // 콤보 리셋
+        // 오답 시 감점 20점 & 시간 감점 2초
+        score = Math.max(0, score - 20);
+        timeLeft = Math.max(0, timeLeft - 2);
+
+        showFloatingScore(secondCard, `-20`, '#ef4444');
+        firstCard.classList.add('shake');
+        secondCard.classList.add('shake');
+
+        updateUI();
+
         setTimeout(() => {
-          firstCard.classList.remove('flipped');
-          secondCard.classList.remove('flipped');
-          resetTurn();
-        }, 1100);
+          firstCard.classList.remove('flipped', 'shake');
+          secondCard.classList.remove('flipped', 'shake');
+          resetSelection();
+        }, 900);
       }
     }
 
-    function resetTurn() {
+    function showFloatingScore(elem, text, color) {
+      const rect = elem.getBoundingClientRect();
+      const floatElem = document.createElement('div');
+      floatElem.className = 'floating-text';
+      floatElem.textContent = text;
+      floatElem.style.color = color;
+      floatElem.style.left = `${rect.left + rect.width / 2 - 20}px`;
+      floatElem.style.top = `${rect.top}px`;
+      document.body.appendChild(floatElem);
+
+      setTimeout(() => floatElem.remove(), 800);
+    }
+
+    function resetSelection() {
       firstCard = null;
       secondCard = null;
-      lockBoard = false;
+      isLocked = false;
+    }
+
+    function updateUI() {
+      document.getElementById('score').textContent = score;
+      document.getElementById('combo').textContent = combo > 1 ? `${combo}x 🔥` : `${combo}x`;
+      document.getElementById('timeLeft').textContent = `${timeLeft}s`;
+    }
+
+    function startTimer() {
+      clearInterval(timer);
+      timer = setInterval(() => {
+        timeLeft--;
+        updateUI();
+        if (timeLeft <= 0) {
+          clearInterval(timer);
+          endGame(false);
+        }
+      }, 1000);
+    }
+
+    function endGame(isClear) {
+      clearInterval(timer);
+      isLocked = true;
+
+      // 최고 점수 갱신
+      if (score > bestScore) {
+        bestScore = score;
+        localStorage.setItem('meiosis_best_score', bestScore);
+        document.getElementById('bestScore').textContent = bestScore;
+      }
+
+      document.getElementById('modalTitle').textContent = isClear ? '🎉 올 클리어 성공!' : '⏰ 타임 오버!';
+      document.getElementById('finalScore').textContent = score;
+      document.getElementById('maxCombo').textContent = maxCombo;
+      document.getElementById('clearedPairs').textContent = matchedCount;
+      document.getElementById('modalOverlay').style.display = 'flex';
     }
 
     function startGame() {
-      turns = 0;
-      matches = 0;
-      document.getElementById('turns').textContent = turns;
-      document.getElementById('matches').textContent = matches;
+      clearInterval(timer);
+      document.getElementById('modalOverlay').style.display = 'none';
+
+      timeLeft = 60;
+      score = 0;
+      combo = 0;
+      maxCombo = 0;
+      matchedCount = 0;
+      isLocked = false;
       firstCard = null;
       secondCard = null;
-      lockBoard = false;
-      cards = buildDeck();
-      renderBoard();
+
+      updateUI();
+      renderBoard(buildCards());
+      startTimer();
     }
 
     window.onload = startGame;
