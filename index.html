@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>생식세포 분열(감수분열) 카드 매칭 게임</title>
+  <style>
+    :root {
+      --bg-color: #f1f5f9;
+      --card-bg: #2563eb;
+      --card-front: #ffffff;
+      --card-matched: #10b981;
+      --text-main: #1e293b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      margin-bottom: 8px;
+    }
+
+    .status-bar {
+      display: flex;
+      gap: 24px;
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      max-width: 680px;
+      width: 100%;
+      perspective: 1000px;
+    }
+
+    .card {
+      position: relative;
+      width: 100%;
+      height: 120px;
+      cursor: pointer;
+      transform-style: preserve-3d;
+      transition: transform 0.4s cubic-bezier(0.4, 0.2, 0.2, 1);
+    }
+
+    .card.flipped, .card.matched {
+      transform: rotateY(180deg);
+      cursor: default;
+    }
+
+    .card-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 10px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      user-select: none;
+      word-break: keep-all;
+    }
+
+    .card-back {
+      background: var(--card-bg);
+      color: white;
+      font-size: 1.8rem;
+    }
+
+    .card-front {
+      background: var(--card-front);
+      transform: rotateY(180deg);
+      border: 2px solid #cbd5e1;
+    }
+
+    .card.matched .card-front {
+      border-color: var(--card-matched);
+      background-color: #ecfdf5;
+    }
+
+    .card-badge {
+      font-size: 0.75rem;
+      font-weight: bold;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #1e3a8a;
+    }
+
+    .card-desc {
+      font-size: 0.8rem;
+      line-height: 1.35;
+      color: #334155;
+    }
+
+    .controls {
+      margin-top: 24px;
+    }
+
+    button {
+      padding: 10px 22px;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      background-color: #1e293b;
+      color: white;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background-color: #334155;
+    }
+
+    @media (max-width: 500px) {
+      .card {
+        height: 100px;
+      }
+      .card-title {
+        font-size: 0.85rem;
+      }
+      .card-desc {
+        font-size: 0.72rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🧬 생식세포 분열 매칭 게임</h1>
+    <p>분열 단계와 그 시기의 핵심 특징을 짝지어 보세요!</p>
+  </header>
+
+  <div class="status-bar">
+    <div>시도 횟수: <span id="turns">0</span>회</div>
+    <div>완성: <span id="matches">0</span> / 6쌍</div>
+  </div>
+
+  <div class="grid-container" id="grid"></div>
+
+  <div class="controls">
+    <button onclick="startGame()">새 게임 시작</button>
+  </div>
+
+  <script>
+    // 생식세포 분열 핵심 카드 데이터 (6쌍 = 12장 구성)
+    const cardData = [
+      {
+        matchId: 'm1_pro',
+        stage: '감수 1분열 전기',
+        desc: '상동 염색체가 접합하여 2가 염색체 형성'
+      },
+      {
+        matchId: 'm1_meta',
+        stage: '감수 1분열 중기',
+        desc: '2가 염색체가 세포 중앙(적도면)에 배열'
+      },
+      {
+        matchId: 'm1_ana',
+        stage: '감수 1분열 후기',
+        desc: '상동 염색체가 분리되어 양극으로 이동 (염색체 수 반감)'
+      },
+      {
+        matchId: 'm1_telo',
+        stage: '감수 1분열 말기',
+        desc: '세포질 분열로 2개의 딸세포 형성'
+      },
+      {
+        matchId: 'm2_ana',
+        stage: '감수 2분열 후기',
+        desc: '염색 분체가 분리되어 양극으로 이동 (염색체 수 유지)'
+      },
+      {
+        matchId: 'm2_telo',
+        stage: '감수 2분열 말기',
+        desc: '총 4개의 생식세포(딸세포) 형성 완료'
+      }
+    ];
+
+    let cards = [];
+    let firstCard = null;
+    let secondCard = null;
+    let lockBoard = false;
+    let turns = 0;
+    let matches = 0;
+
+    function buildDeck() {
+      const deck = [];
+      let idCounter = 1;
+
+      cardData.forEach((item) => {
+        // 1. 단계 명칭 카드
+        deck.push({
+          id: idCounter++,
+          matchId: item.matchId,
+          type: 'title',
+          badge: '[분열 단계]',
+          text: item.stage
+        });
+        // 2. 핵심 특징 카드
+        deck.push({
+          id: idCounter++,
+          matchId: item.matchId,
+          type: 'desc',
+          badge: '[핵심 특징]',
+          text: item.desc
+        });
+      });
+
+      // Fisher-Yates 셔플 알고리즘으로 무작위 섞기
+      for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+      }
+
+      return deck;
+    }
+
+    function renderBoard() {
+      const grid = document.getElementById('grid');
+      grid.innerHTML = '';
+
+      cards.forEach((card) => {
+        const cardElem = document.createElement('div');
+        cardElem.classList.add('card');
+        cardElem.dataset.id = card.id;
+        cardElem.dataset.matchId = card.matchId;
+
+        const contentClass = card.type === 'title' ? 'card-title' : 'card-desc';
+
+        cardElem.innerHTML = `
+          <div class="card-face card-back">🧬</div>
+          <div class="card-face card-front">
+            <div class="card-badge">${card.badge}</div>
+            <div class="${contentClass}">${card.text}</div>
+          </div>
+        `;
+
+        cardElem.addEventListener('click', () => flipCard(cardElem));
+        grid.appendChild(cardElem);
+      });
+    }
+
+    function flipCard(cardElem) {
+      if (lockBoard) return;
+      if (cardElem.classList.contains('flipped') || cardElem.classList.contains('matched')) return;
+
+      cardElem.classList.add('flipped');
+
+      if (!firstCard) {
+        firstCard = cardElem;
+        return;
+      }
+
+      secondCard = cardElem;
+      turns++;
+      document.getElementById('turns').textContent = turns;
+      checkMatch();
+    }
+
+    function checkMatch() {
+      const isMatch = firstCard.dataset.matchId === secondCard.dataset.matchId;
+
+      if (isMatch) {
+        firstCard.classList.add('matched');
+        secondCard.classList.add('matched');
+        matches++;
+        document.getElementById('matches').textContent = matches;
+        resetTurn();
+
+        if (matches === cardData.length) {
+          setTimeout(() => {
+            alert(`🎉 축하합니다! 총 ${turns}회 시도만에 모든 단계를 맞췄습니다.`);
+          }, 400);
+        }
+      } else {
+        lockBoard = true;
+        setTimeout(() => {
+          firstCard.classList.remove('flipped');
+          secondCard.classList.remove('flipped');
+          resetTurn();
+        }, 1100);
+      }
+    }
+
+    function resetTurn() {
+      firstCard = null;
+      secondCard = null;
+      lockBoard = false;
+    }
+
+    function startGame() {
+      turns = 0;
+      matches = 0;
+      document.getElementById('turns').textContent = turns;
+      document.getElementById('matches').textContent = matches;
+      firstCard = null;
+      secondCard = null;
+      lockBoard = false;
+      cards = buildDeck();
+      renderBoard();
+    }
+
+    window.onload = startGame;
+  </script>
+</body>
+</html>
